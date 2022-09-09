@@ -1529,6 +1529,8 @@ protected:
 
   bool is_sleeping_;
 
+  uint32_t frame_counter_{0};
+
   // diagnostics
   diagnostic_updater::Updater diagnostics_updater_;
 };

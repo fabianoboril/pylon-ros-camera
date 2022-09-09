@@ -822,6 +822,16 @@ void PylonROS2CameraNode::spin()
       cam_info.header.stamp = this->img_raw_msg_.header.stamp;
       // publish via image_transport
       this->img_raw_pub_.publish(this->img_raw_msg_, cam_info);
+      this->frame_counter_++;
+      
+      if (this->frame_counter_ > 9000)
+      {
+        RCLCPP_INFO(LOGGER, "Pylon camera restart grabbing after 9000 frames");
+        this->grabbingStopping();
+        this->grabbingStarting();
+        this->frame_counter_ = 0;
+      }
+          
     }
 
     if (this->getNumSubscribersRectImagePub() > 0 && this->camera_info_manager_->isCalibrated())
