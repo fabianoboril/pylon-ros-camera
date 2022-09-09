@@ -66,7 +66,7 @@ public:
 
     virtual bool startGrabbing(const PylonROS2CameraParameter& parameters);
 
-    virtual bool grab(std::vector<uint8_t>& image);
+    virtual bool grab(std::vector<uint8_t>& image, int64_t *stampNSec);
 
     virtual bool grab(uint8_t* image);
 

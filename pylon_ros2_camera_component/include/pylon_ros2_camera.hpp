@@ -112,7 +112,7 @@ public:
      * @param image reference to the output image.
      * @return true if the image was grabbed successfully.
      */
-    virtual bool grab(std::vector<uint8_t>& image) = 0;
+    virtual bool grab(std::vector<uint8_t>& image, int64_t *stampNSec) = 0;
 
     /**
      * Grab a camera frame and copy the result into image

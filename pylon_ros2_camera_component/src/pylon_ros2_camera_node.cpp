@@ -861,11 +861,13 @@ bool PylonROS2CameraNode::grabImage()
   using namespace std::chrono_literals;
 
   std::lock_guard<std::recursive_mutex> lock(this->grab_mutex_);
-  if (!this->pylon_camera_->grab(img_raw_msg_.data))
+  int64_t timeStampNSec = 0;
+  if (!this->pylon_camera_->grab(img_raw_msg_.data, &timeStampNSec))
   {
     return false;
   }
-  img_raw_msg_.header.stamp = rclcpp::Node::now(); 
+  img_raw_msg_.header.stamp = rclcpp::Time(timeStampNSec);
+  // img_raw_msg_.header.stamp = rclcpp::Node::now(); 
   return true;
 }
 
@@ -3960,13 +3962,15 @@ std::shared_ptr<GrabImagesAction::Result> PylonROS2CameraNode::grabRawImages(con
     // already contains the number of channels
     img.step = img.width * this->pylon_camera_->imagePixelDepth();
 
-    if (!this->pylon_camera_->grab(img.data))
+    int64_t timeStampNSec = 0;
+    if (!this->pylon_camera_->grab(img.data, &timeStampNSec))
     {
       result->success = false;
       break;
     }
 
-    img.header.stamp = rclcpp::Node::now();
+    img.header.stamp = rclcpp::Time(timeStampNSec);
+    // img.header.stamp = rclcpp::Node::now();
     img.header.frame_id = cameraFrame();
 
     feedback->curr_nr_images_taken = i + 1;

@@ -407,7 +407,7 @@ bool PylonROS2CameraImpl<CameraTraitT>::startGrabbing(const PylonROS2CameraParam
 
 // Grab a picture as std::vector of 8bits objects
 template <typename CameraTrait>
-bool PylonROS2CameraImpl<CameraTrait>::grab(std::vector<uint8_t>& image)
+bool PylonROS2CameraImpl<CameraTrait>::grab(std::vector<uint8_t>& image, int64_t *stampNSec)
 { 
     Pylon::CGrabResultPtr ptr_grab_result;
     if ( !grab(ptr_grab_result) )
@@ -435,6 +435,17 @@ bool PylonROS2CameraImpl<CameraTrait>::grab(std::vector<uint8_t>& image)
     }
 
     delete[] shift_array;
+
+    GenApi::CIntegerPtr chunkTimestamp(ptr_grab_result->GetChunkDataNodeMap().GetNode( "ChunkTimestamp"));
+    if (GenApi::IsReadable(chunkTimestamp))
+    {
+        *stampNSec = chunkTimestamp->GetValue();
+    }
+    else
+    {
+        RCLCPP_WARN(LOGGER_BASE, "Error: unable to read time stamp from camera");
+        return false;
+    }
     
     if ( !is_ready_ )
         is_ready_ = true;
