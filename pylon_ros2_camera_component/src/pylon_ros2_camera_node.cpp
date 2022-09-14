@@ -53,6 +53,7 @@ PylonROS2CameraNode::PylonROS2CameraNode(const rclcpp::NodeOptions& options)
   , brightness_exp_lut_()
   , is_sleeping_(false)
   , diagnostics_updater_(this)
+  , diagnostics_img_pub_freq_(nullptr)
 {
   // information logging severity mode
   rcutils_ret_t __attribute__((unused)) res = rcutils_logging_set_logger_level(LOGGER.get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
@@ -100,6 +101,12 @@ PylonROS2CameraNode::~PylonROS2CameraNode()
   {
     delete this->pinhole_model_;
     this->pinhole_model_ = nullptr;
+  }
+
+  if ( this->diagnostics_img_pub_freq_)
+  {
+    delete this->diagnostics_img_pub_freq_;
+    this->diagnostics_img_pub_freq_ = nullptr;
   }
 }
 
@@ -468,8 +475,23 @@ void PylonROS2CameraNode::initDiagnostics()
   this->diagnostics_updater_.setHardwareID("none");
   this->diagnostics_updater_.add("camera_availability", this, &PylonROS2CameraNode::createDiagnostics);
   this->diagnostics_updater_.add("intrinsic_calibration", this, &PylonROS2CameraNode::createCameraInfoDiagnostics);
+  
+  const double diagnostics_img_pub_expected_frequency_tolerance_percentage = 0.1;
+  const int diagnostics_img_pub_window_size = 10;
+  const double diagnostics_img_pub_timestamp_min_acceptable_delta_secs = 0.01;
+  const double diagnostics_img_pub_timestamp_max_acceptable_delta_secs = 4.0/this->diagnostics_img_pub_expected_frequency;
+  this->diagnostics_img_pub_freq_ = new diagnostic_updater::TopicDiagnostic("image", this->diagnostics_updater_,
+    diagnostic_updater::FrequencyStatusParam(
+      &this->diagnostics_img_pub_expected_frequency, 
+      &this->diagnostics_img_pub_expected_frequency,
+      diagnostics_img_pub_expected_frequency_tolerance_percentage,
+      diagnostics_img_pub_window_size),
+    diagnostic_updater::TimeStampStatusParam(
+      diagnostics_img_pub_timestamp_min_acceptable_delta_secs, 
+      diagnostics_img_pub_timestamp_max_acceptable_delta_secs)
+  );
 
-  auto diagnostics_trigger = this->create_wall_timer(2000ms, std::bind(&PylonROS2CameraNode::diagnosticsTimerCallback, this));
+  this->diagnostics_trigger_timer_ = this->create_wall_timer(2000ms, std::bind(&PylonROS2CameraNode::diagnosticsTimerCallback, this));
 }
 
 bool PylonROS2CameraNode::initAndRegister()
@@ -478,14 +500,8 @@ bool PylonROS2CameraNode::initAndRegister()
 
   if (this->pylon_camera_ == nullptr)
   {
-    this->cm_status_.status_id = pylon_ros2_camera_interfaces::msg::ComponentStatus::ERROR;
-    this->cm_status_.status_msg = "No available camera";
-
-    if (this->pylon_camera_parameter_set_.enable_status_publisher_)
-    {
-      this->component_status_pub_->publish(this->cm_status_);
-    }
-
+    // update status and diagnostics
+    this->diagnosticsTimerCallback();
     RCLCPP_WARN_STREAM(LOGGER, "Failed to connect camera device with device user id: "<< this->pylon_camera_parameter_set_.deviceUserID() << ". "
                             << "Wait and retry to connect until the specified camera is available...");
 
@@ -504,14 +520,9 @@ bool PylonROS2CameraNode::initAndRegister()
       if (rclcpp::Node::now() > end)
       {
         RCLCPP_WARN_STREAM(LOGGER, "No available camera. Keep waiting and trying...");
-        this->cm_status_.status_id = pylon_ros2_camera_interfaces::msg::ComponentStatus::ERROR;
-        this->cm_status_.status_msg = "No available camera";
-
-        if (this->pylon_camera_parameter_set_.enable_status_publisher_)
-        {
-          this->component_status_pub_->publish(this->cm_status_);
-        }
-
+    
+        // update status and diagnostics
+        this->diagnosticsTimerCallback();
         end = rclcpp::Node::now() + std::chrono::duration<double>(15);
       }
 
@@ -845,6 +856,8 @@ void PylonROS2CameraNode::spin()
       this->pinhole_model_->rectifyImage(cv_img_raw->image, this->cv_bridge_img_rect_->image);
       this->img_rect_pub_->publish(this->cv_bridge_img_rect_->toImageMsg());
     }
+
+    this->diagnostics_img_pub_freq_->tick(this->img_raw_msg_.header.stamp);
   }
 
   // Check if the image encoding changed , then save the new image encoding and restart the image grabbing to fix the ros sensor message type issue.
@@ -2463,6 +2476,7 @@ void PylonROS2CameraNode::setAcquisitionFrameCountCallback(const std::shared_ptr
   if ((response->message.find("done") != std::string::npos) != 0)
   {
     response->success = true;
+    this->diagnostics_img_pub_expected_frequency = request->value;
   }
   else 
   {

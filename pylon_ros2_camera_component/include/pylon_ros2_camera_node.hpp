@@ -80,6 +80,7 @@
 #include <image_transport/publisher.hpp>
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <diagnostic_updater/publisher.hpp>
 
 
 namespace pylon_ros2_camera
@@ -1533,6 +1534,9 @@ protected:
 
   // diagnostics
   diagnostic_updater::Updater diagnostics_updater_;
+  rclcpp::TimerBase::SharedPtr diagnostics_trigger_timer_;
+  diagnostic_updater::TopicDiagnostic* diagnostics_img_pub_freq_;
+  double diagnostics_img_pub_expected_frequency{15.};
 };
 
 } // namespace pylon_camera
