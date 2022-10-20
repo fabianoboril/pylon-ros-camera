@@ -515,18 +515,18 @@ bool PylonROS2CameraNode::initAndRegister()
       {
         RCLCPP_WARN_STREAM(LOGGER, "Failed to connect camera device with device user id: "<< this->pylon_camera_parameter_set_.deviceUserID() << ". "
                             << "Trying again in a bit...");
-      }
 
-      if (rclcpp::Node::now() > end)
-      {
-        RCLCPP_WARN_STREAM(LOGGER, "No available camera. Keep waiting and trying...");
-    
-        // update status and diagnostics
-        this->diagnosticsTimerCallback();
-        end = rclcpp::Node::now() + std::chrono::duration<double>(15);
-      }
+        if (rclcpp::Node::now() > end)
+        {
+          RCLCPP_WARN_STREAM(LOGGER, "No available camera. Keep waiting and trying...");
 
-      r.sleep();
+          // update status and diagnostics
+          this->diagnosticsTimerCallback();
+          end = rclcpp::Node::now() + std::chrono::duration<double>(15);
+        }
+
+        r.sleep();
+      }
     }
   }
 
@@ -3572,13 +3572,16 @@ void PylonROS2CameraNode::createDiagnostics(diagnostic_updater::DiagnosticStatus
 
 void PylonROS2CameraNode::createCameraInfoDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat)
 {
-  if (this->camera_info_manager_->isCalibrated())
+  if (this->pylon_camera_)
   {
-    stat.summaryf(diagnostic_msgs::msg::DiagnosticStatus::OK, "Intrinsic calibration found");
-  }
-  else
-  {
-    stat.summaryf(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "No intrinsic calibration found");
+    if (this->camera_info_manager_->isCalibrated())
+    {
+      stat.summaryf(diagnostic_msgs::msg::DiagnosticStatus::OK, "Intrinsic calibration found");
+    }
+    else
+    {
+      stat.summaryf(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "No intrinsic calibration found");
+    }
   }
 }
 
