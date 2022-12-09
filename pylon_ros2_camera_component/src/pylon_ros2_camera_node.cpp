@@ -71,9 +71,12 @@ PylonROS2CameraNode::PylonROS2CameraNode(const rclcpp::NodeOptions& options)
     return;
 
   // starting spinning thread
-  RCLCPP_INFO_STREAM(LOGGER, "Start image grabbing if node connects to topic with " << "a frame_rate of: " << this->frameRate() << " Hz");
+  // multiply desired framerate with spin_factor to avoid filling a queue and getting huge latency
+  // https://github.com/basler/pylon-ros-camera/issues/120
+  const float spin_factor = 10.f;
+  RCLCPP_INFO_STREAM(LOGGER, "Start image grabbing if node connects to topic with " << "a frame_rate of: " << this->frameRate() * spin_factor << " Hz");
   timer_ = this->create_wall_timer(
-            std::chrono::duration<double>(1. / this->frameRate()),
+            std::chrono::duration<double>(1. / (this->frameRate() * spin_factor)),
             std::bind(&PylonROS2CameraNode::spin, this));
 }
 
