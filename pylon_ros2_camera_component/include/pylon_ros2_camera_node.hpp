@@ -1536,7 +1536,7 @@ protected:
   diagnostic_updater::Updater diagnostics_updater_;
   rclcpp::TimerBase::SharedPtr diagnostics_trigger_timer_;
   diagnostic_updater::TopicDiagnostic* diagnostics_img_pub_freq_;
-  double diagnostics_img_pub_expected_frequency{15.};
+  double diagnostics_img_pub_expected_frequency{10.};
 };
 
 } // namespace pylon_camera

@@ -861,6 +861,10 @@ void PylonROS2CameraNode::spin()
     }
 
     this->diagnostics_img_pub_freq_->tick(this->img_raw_msg_.header.stamp);
+    if ((this->frame_counter_%10)==0)
+    {
+        RCLCPP_INFO(LOGGER, "Pub Freq ticked 10 frames");
+    }
   }
 
   // Check if the image encoding changed , then save the new image encoding and restart the image grabbing to fix the ros sensor message type issue.
