@@ -14,7 +14,7 @@ def generate_launch_description():
     
     # adapt if needed
     debug = False
-    respawn = False
+    respawn = True
 
     default_config_file = os.path.join(
         get_package_share_directory('pylon_ros2_camera_wrapper'),

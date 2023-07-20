@@ -521,11 +521,13 @@ bool PylonROS2CameraNode::initAndRegister()
 
         if (rclcpp::Node::now() > end)
         {
-          RCLCPP_WARN_STREAM(LOGGER, "No available camera. Keep waiting and trying...");
+          RCLCPP_WARN_STREAM(LOGGER, "No available camera. Exiting");
+          return false;
+          // RCLCPP_WARN_STREAM(LOGGER, "No available camera. Keep waiting and trying...");
 
-          // update status and diagnostics
-          this->diagnosticsTimerCallback();
-          end = rclcpp::Node::now() + std::chrono::duration<double>(15);
+          // // update status and diagnostics
+          // this->diagnosticsTimerCallback();
+          // end = rclcpp::Node::now() + std::chrono::duration<double>(15);
         }
 
         r.sleep();
@@ -767,6 +769,9 @@ bool PylonROS2CameraNode::startGrabbing()
               this->pylon_camera_parameter_set_.frameRate(),
               this->pylon_camera_->maxPossibleFramerate());
     this->pylon_camera_parameter_set_.setFrameRate(*this, this->pylon_camera_->maxPossibleFramerate());
+
+    RCLCPP_WARN_STREAM(LOGGER, "Trying to restart camera... ");
+    return false;
   }
   else if (this->pylon_camera_parameter_set_.frameRate() == -1)
   {
