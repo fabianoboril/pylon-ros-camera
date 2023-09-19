@@ -839,6 +839,7 @@ void PylonROS2CameraNode::spin()
       // changed due to a 'set_camera_info'-service call
       sensor_msgs::msg::CameraInfo cam_info = this->camera_info_manager_->getCameraInfo();
       cam_info.header.stamp = this->img_raw_msg_.header.stamp;
+
       // publish via image_transport
       this->img_raw_pub_.publish(this->img_raw_msg_, cam_info);
       this->frame_counter_++;
@@ -850,7 +851,6 @@ void PylonROS2CameraNode::spin()
         this->grabbingStarting();
         this->frame_counter_ = 0;
       }
-          
     }
 
     if (this->getNumSubscribersRectImagePub() > 0 && this->camera_info_manager_->isCalibrated())
@@ -868,7 +868,22 @@ void PylonROS2CameraNode::spin()
     this->diagnostics_img_pub_freq_->tick(this->img_raw_msg_.header.stamp);
     if ((this->frame_counter_%10)==0)
     {
-        RCLCPP_INFO(LOGGER, "Pub Freq ticked 10 frames");
+      RCLCPP_INFO(LOGGER, "Pub Freq ticked 10 frames");
+
+      // Check if the camera timestamp is correct
+      // if not, throw to restart ROS node
+      auto now = std::chrono::system_clock::now();
+      auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
+      auto epoch = now_ms.time_since_epoch();
+      auto value = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
+
+      auto img_stamp = this->img_raw_msg_.header.stamp;
+      RCLCPP_INFO(LOGGER, "%f vs. %f",img_stamp.sec + img_stamp.nanosec * 1e-9, value.count() * 1e-3);
+      if (std::fabs((img_stamp.sec + img_stamp.nanosec * 1e-9) - (value.count() * 1e-3)) > 100)
+      {
+        RCLCPP_ERROR(LOGGER, "Wrong timestamp or time source, trying to reset");
+        throw std::runtime_error("Wrong timestamp or time source, trying to reset");
+      }
     }
   }
 
